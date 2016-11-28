@@ -69,7 +69,7 @@
                     <ImageView
                         android:layout_width="wrap_content"
                         android:layout_height="48dp"
-                        android:id="@+id/login_twitter"
+                        android:id="@+id/login_google"
                         android:adjustViewBounds="true"
                         android:layout_marginTop="8dp"
                         android:src="@drawable/ic_connect_with_gg"
@@ -79,7 +79,7 @@
 
 
                 <com.google.android.gms.common.SignInButton
-                    android:id="@+id/btn_sign_in"
+                    android:id="@+id/btn_sign_in_google"
                     android:layout_width="fill_parent"
                     android:layout_height="wrap_content"
                     android:visibility="gone"
@@ -118,7 +118,7 @@
                 android:layout_height="wrap_content">
 
                 <AutoCompleteTextView
-                    android:id="@+id/email"
+                    android:id="@+id/edEemail"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="@string/prompt_email"
@@ -133,7 +133,7 @@
                 android:layout_height="wrap_content">
 
                 <EditText
-                    android:id="@+id/password"
+                    android:id="@+id/edPassword"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="@string/prompt_password"

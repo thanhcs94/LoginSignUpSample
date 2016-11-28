@@ -3,6 +3,7 @@ package com.thanhcs94.loginsignupsample;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.annotation.TargetApi;
+import android.app.ProgressDialog;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -33,7 +34,6 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
-
 import com.facebook.AccessToken;
 import com.facebook.CallbackManager;
 import com.facebook.FacebookCallback;
@@ -45,27 +45,39 @@ import com.facebook.Profile;
 import com.facebook.ProfileTracker;
 import com.facebook.login.LoginResult;
 import com.facebook.login.widget.LoginButton;
+import com.google.android.gms.auth.GoogleAuthException;
+import com.google.android.gms.auth.GoogleAuthUtil;
+import com.google.android.gms.auth.UserRecoverableAuthException;
 import com.google.android.gms.auth.api.Auth;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.auth.api.signin.GoogleSignInResult;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.SignInButton;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.OptionalPendingResult;
+import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.common.api.Status;
+import com.google.android.gms.plus.Plus;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
 import butterknife.Bind;
-
+import butterknife.ButterKnife;
 import static android.Manifest.permission.READ_CONTACTS;
 
 /**
  * A login screen that offers login via email/password.
  */
-public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<Cursor> {
-
+public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<Cursor>,   GoogleApiClient.OnConnectionFailedListener {
+    public static final String TAG = LoginActivity.class.getSimpleName();
     /**
      * Id to identity READ_CONTACTS permission request.
      */
@@ -78,43 +90,52 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
     private static final String[] DUMMY_CREDENTIALS = new String[]{
             "foo@example.com:hello", "bar@example.com:world"
     };
-    /**
-     * Keep track of the login task to ensure we can cancel it if requested.
-     */
-    private UserLoginTask mAuthTask = null;
-
     // UI references.
-    private AutoCompleteTextView mEmailView;
-    private EditText mPasswordView;
-    private View mProgressView;
-    private View mLoginFormView;
-    ImageView imgFbLogin;
+    @Bind(R.id.edEemail)
+    AutoCompleteTextView edEmail;
+    @Bind(R.id.edPassword)
+    EditText edPassWord;
+    @Bind(R.id.login_progress)
+    View mProgressView;
+    @Bind(R.id.login_form)
+    View mLoginFormView;
     @Bind(R.id.login_facebook)
-    LoginButton fbLoginFB;
-    @Bind(R.id.fb_login_button)
-
-
-    private static final String TAG = LoginActivity.class.getSimpleName();
-
+    ImageView imgFbLogin;
+    @Bind(R.id.email_sign_in_button)
+    Button mEmailSignInButton;
+    @Bind(R.id.login_google)
+    ImageView imgPlusLogin;
+    // Value
     String socialEmail;
     String socialBirthday;
     String socialGender;
 
     //facebook
     private CallbackManager callbackManager;
-    LoginButton loginButton;
+    @Bind(R.id.fb_login_button)
+    LoginButton signInFB;
     String accessToken , uId , type;
+    //google
+    private static final int REQ_SIGN_IN_REQUIRED = 55664;
+    private static final int REQUEST_SIGNUP = 0;
+    @Bind(R.id.btn_sign_in_google)
+    SignInButton signInGoogle;
+    private static final int RC_SIGN_IN = 007;
+    private GoogleApiClient mGoogleApiClient;
+    private ProgressDialog mProgressDialog;
+    public String  gMailPlus;
+    //Task
+    private UserLoginTask mAuthTask = null;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         FacebookSdk.sdkInitialize(getApplicationContext());
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
+        ButterKnife.bind(this);
         // Set up the login form.
-        mEmailView = (AutoCompleteTextView) findViewById(R.id.email);
         populateAutoComplete();
 
-        mPasswordView = (EditText) findViewById(R.id.password);
-        mPasswordView.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+        edPassWord.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             @Override
             public boolean onEditorAction(TextView textView, int id, KeyEvent keyEvent) {
                 if (id == R.id.login || id == EditorInfo.IME_NULL) {
@@ -124,8 +145,6 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
                 return false;
             }
         });
-
-        Button mEmailSignInButton = (Button) findViewById(R.id.email_sign_in_button);
         mEmailSignInButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -133,12 +152,16 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
             }
         });
 
-        mLoginFormView = findViewById(R.id.login_form);
-        mProgressView = findViewById(R.id.login_progress);
         imgFbLogin.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View view) {
-                fbLoginFB.performClick();
+                signInFB.performClick();
+            }
+        });
+        imgPlusLogin.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                signInGoogle.performClick();
             }
         });
 
@@ -148,9 +171,9 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
          */
         getHashCode();
         //facebook
-        loginButton.setReadPermissions(Arrays.asList("public_profile", "email", "user_birthday", "user_friends"));
+        signInFB.setReadPermissions(Arrays.asList("public_profile", "email", "user_birthday", "user_friends"));
         callbackManager = CallbackManager.Factory.create();
-        loginButton.registerCallback(callbackManager, new FacebookCallback<LoginResult>() {
+        signInFB.registerCallback(callbackManager, new FacebookCallback<LoginResult>() {
             @Override
             public void onSuccess(final LoginResult loginResult) {
                 ProfileTracker profileTracker = new ProfileTracker() {
@@ -230,7 +253,45 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
          * G++ login
          * Start G++_login
          */
+        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestEmail()
+                .build();
 
+        mGoogleApiClient = new GoogleApiClient.Builder(this)
+                .enableAutoManage(this, this)
+                .addApi(Auth.GOOGLE_SIGN_IN_API, gso)
+                .addApi(Plus.API)
+                .build();
+        signInGoogle.setSize(SignInButton.SIZE_STANDARD);
+        signInGoogle.setScopes(gso.getScopeArray());
+        signInGoogle.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+
+                OptionalPendingResult<GoogleSignInResult> opr = Auth.GoogleSignInApi.silentSignIn(mGoogleApiClient);
+                if (opr.isDone()) {
+                    // If the user's cached credentials are valid, the OptionalPendingResult will be "done"
+                    // and the GoogleSignInResult will be available instantly.
+                    Log.d(TAG, "Got cached sign-in");
+                    GoogleSignInResult result = opr.get();
+                    handleSignInResult(result);
+                } else {
+                    // If the user has not previously signed in on this device or the sign-in has expired,
+                    // this asynchronous branch will attempt to sign in the user silently.  Cross-device
+                    // single sign-on will occur in this branch.
+                    showProgressDialog();
+                    opr.setResultCallback(new ResultCallback<GoogleSignInResult>() {
+                        @Override
+                        public void onResult(GoogleSignInResult googleSignInResult) {
+                            hideProgressDialog();
+                            handleSignInResult(googleSignInResult);
+                        }
+                    });
+                }
+
+                signIn();
+            }
+        });
     }
 
     /** Facebook **/
@@ -250,8 +311,68 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
         } catch (NoSuchAlgorithmException e) {
 
         }
-
     }
+    private void showProgressDialog() {
+        if (mProgressDialog == null) {
+            mProgressDialog = new ProgressDialog(this);
+            mProgressDialog.setMessage("loading...");
+            mProgressDialog.setIndeterminate(true);
+        }
+
+        mProgressDialog.show();
+    }
+
+    private void hideProgressDialog() {
+        if (mProgressDialog != null && mProgressDialog.isShowing()) {
+            mProgressDialog.hide();
+        }
+    }
+
+    public void onSignOutClicked() {
+        Log.e(TAG, "onSignOutClicked");
+        if (mGoogleApiClient.isConnected()) {
+            Plus.AccountApi.clearDefaultAccount(mGoogleApiClient);
+            mGoogleApiClient.disconnect();
+        }
+    }
+
+    @Override
+    public void onConnectionFailed(ConnectionResult connectionResult) {
+        // Could not connect to Google Play Services.  The user needs to select an account,
+        // grant permissions or resolve an errorloading in order to sign in. Refer to the javadoc for
+        // ConnectionResult to see possible errorloading codes.
+        Log.e(TAG, "onConnectionFailed:" + connectionResult);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (getIntent().getBooleanExtra("LOGOUT", false)) {
+            onSignOutClicked();
+        }
+    }
+    @Override
+    public void onStop() {
+        super.onStop();
+        Log.e(TAG, "onStop");
+        mGoogleApiClient.disconnect();
+    }
+
+    private void signIn() {
+        Intent signInIntent = Auth.GoogleSignInApi.getSignInIntent(mGoogleApiClient);
+        startActivityForResult(signInIntent, RC_SIGN_IN);
+    }
+
+    private void signOut() {
+        Auth.GoogleSignInApi.signOut(mGoogleApiClient).setResultCallback(
+                new ResultCallback<Status>() {
+                    @Override
+                    public void onResult(Status status) {
+                        //updateUI(false);
+                    }
+                });
+    }
+
     private void populateAutoComplete() {
         if (!mayRequestContacts()) {
             return;
@@ -268,7 +389,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
             return true;
         }
         if (shouldShowRequestPermissionRationale(READ_CONTACTS)) {
-            Snackbar.make(mEmailView, R.string.permission_rationale, Snackbar.LENGTH_INDEFINITE)
+            Snackbar.make(edEmail, R.string.permission_rationale, Snackbar.LENGTH_INDEFINITE)
                     .setAction(android.R.string.ok, new View.OnClickListener() {
                         @Override
                         @TargetApi(Build.VERSION_CODES.M)
@@ -288,18 +409,41 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
         Log.e(TAG, "onActivityResult:" + requestCode + ":" + resultCode + ":" + data);
 
         // Result returned from launching the Intent from GoogleSignInApi.getSignInIntent(...);
-//        if (requestCode == RC_SIGN_IN) {
-//            GoogleSignInResult result = Auth.GoogleSignInApi.getSignInResultFromIntent(data);
-//            handleSignInResult(result);
-//        }
-//
-//        if (requestCode == REQ_SIGN_IN_REQUIRED && resultCode == RESULT_OK) {
-//            // We had to sign in - now we can finish off the token request.
-//            new RetrieveTokenTask().execute(gMailPlus);
-//        }
+        if (requestCode == RC_SIGN_IN) {
+            GoogleSignInResult result = Auth.GoogleSignInApi.getSignInResultFromIntent(data);
+            handleSignInResult(result);
+        }
+
+        if (requestCode == REQ_SIGN_IN_REQUIRED && resultCode == RESULT_OK) {
+            // We had to sign in - now we can finish off the token request.
+            new RetrieveTokenTask().execute(gMailPlus);
+        }
 
         callbackManager.onActivityResult(requestCode, resultCode, data);
     }
+
+    private void handleSignInResult(GoogleSignInResult result) {
+        Log.d(TAG, "handleSignInResult:" + result.isSuccess());
+        if (result.isSuccess()) {
+            // Signed in successfully, show authenticated UI.
+            GoogleSignInAccount acct = result.getSignInAccount();
+            Log.e(TAG, "display name: " + acct.getDisplayName());
+
+            final String personName = acct.getDisplayName();
+            final String email = acct.getEmail();
+            gMailPlus = email;
+            uId = acct.getId();
+            type = "Gmail";
+            new RetrieveTokenTask().execute(gMailPlus);
+            Log.e(TAG, "Name: " + personName + ", email: " + email +" uId "+ uId);
+
+            //             loginwithSocial(assettoken, "Gmail", uId);
+
+        } else {
+
+        }
+    }
+
     /**
      * Callback received when a permissions request has been completed.
      */
@@ -325,31 +469,31 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
         }
 
         // Reset errors.
-        mEmailView.setError(null);
-        mPasswordView.setError(null);
+        edEmail.setError(null);
+        edPassWord.setError(null);
 
         // Store values at the time of the login attempt.
-        String email = mEmailView.getText().toString();
-        String password = mPasswordView.getText().toString();
+        String email = edEmail.getText().toString();
+        String password = edPassWord.getText().toString();
 
         boolean cancel = false;
         View focusView = null;
 
         // Check for a valid password, if the user entered one.
         if (!TextUtils.isEmpty(password) && !isPasswordValid(password)) {
-            mPasswordView.setError(getString(R.string.error_invalid_password));
-            focusView = mPasswordView;
+            edPassWord.setError(getString(R.string.error_invalid_password));
+            focusView = edPassWord;
             cancel = true;
         }
 
         // Check for a valid email address.
         if (TextUtils.isEmpty(email)) {
-            mEmailView.setError(getString(R.string.error_field_required));
-            focusView = mEmailView;
+            edEmail.setError(getString(R.string.error_field_required));
+            focusView = edEmail;
             cancel = true;
         } else if (!isEmailValid(email)) {
-            mEmailView.setError(getString(R.string.error_invalid_email));
-            focusView = mEmailView;
+            edEmail.setError(getString(R.string.error_invalid_email));
+            focusView = edEmail;
             cancel = true;
         }
 
@@ -452,7 +596,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
                 new ArrayAdapter<>(LoginActivity.this,
                         android.R.layout.simple_dropdown_item_1line, emailAddressCollection);
 
-        mEmailView.setAdapter(adapter);
+        edEmail.setAdapter(adapter);
     }
 
 
@@ -511,8 +655,8 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
             if (success) {
                 finish();
             } else {
-                mPasswordView.setError(getString(R.string.error_incorrect_password));
-                mPasswordView.requestFocus();
+                edPassWord.setError(getString(R.string.error_incorrect_password));
+                edPassWord.requestFocus();
             }
         }
 
@@ -520,6 +664,40 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
         protected void onCancelled() {
             mAuthTask = null;
             showProgress(false);
+        }
+    }
+
+    private class RetrieveTokenTask extends AsyncTask<String, Void, String> {
+
+        @Override
+        protected String doInBackground(String... params) {
+            String accountName = params[0];
+            String scopes = "oauth2:profile email";
+            String token = null;
+            try {
+                token = GoogleAuthUtil.getToken(getApplicationContext(), accountName, scopes);
+            } catch (IOException e) {
+                Log.e(TAG, e.getMessage());
+            } catch (UserRecoverableAuthException e) {
+                startActivityForResult(e.getIntent(), REQ_SIGN_IN_REQUIRED);
+            } catch (GoogleAuthException e) {
+                Log.e(TAG, e.getMessage());
+            }
+            return token;
+        }
+
+        @Override
+        protected void onPostExecute(String s) {
+            super.onPostExecute(s);
+            if(s != null){
+                if(!s.isEmpty()) {
+                    accessToken = s;
+                    //loginwithSocial(accessToken, type, uId, TRACK_SOCIAL_GPLUS);
+                    Log.wtf("Data GPlus", " token "+s);
+                }
+                Log.wtf("Data GPlus", " token "+s);
+            }
+            Log.wtf("Data GPlus", " token "+s);
         }
     }
 }
