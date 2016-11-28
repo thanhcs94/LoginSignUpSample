@@ -78,20 +78,20 @@
                 </LinearLayout>
 
 
-                <!--<com.twitter.sdk.android.core.identity.TwitterLoginButton-->
-                    <!--android:id="@+id/twitter_login_button"-->
-                    <!--android:layout_width="wrap_content"-->
-                    <!--android:visibility="gone"-->
-                    <!--android:layout_height="wrap_content"-->
-                    <!--android:layout_centerInParent="true"/>-->
+                <com.google.android.gms.common.SignInButton
+                    android:id="@+id/btn_sign_in"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone"
+                    android:layout_marginBottom="20dp" />
 
-                <!--<com.facebook.login.widget.LoginButton-->
-                    <!--android:id="@+id/login_button"-->
-                    <!--android:layout_width="wrap_content"-->
-                    <!--android:layout_height="wrap_content"-->
-                    <!--android:layout_centerInParent="true"-->
-                    <!--android:visibility="gone"-->
-                    <!--/>-->
+                <com.facebook.login.widget.LoginButton
+                    android:id="@+id/fb_login_button"
+                    android:layout_width="fill_parent"
+                    android:visibility="gone"
+                    android:layout_height="wrap_content"
+                    android:layout_centerInParent="true"
+                    />
 
             </LinearLayout>
 

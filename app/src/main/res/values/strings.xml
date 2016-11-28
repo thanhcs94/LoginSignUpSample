@@ -1,5 +1,8 @@
 <resources>
-    <string name="app_name">Sample project</string>
+    <string name="app_name">Login Sample</string>
+
+    <!-- ID !-->
+    <string name="facebook_app_id">yourFbID</string>
 
     <!-- Strings related to login -->
     <string name="prompt_email">Email</string>
