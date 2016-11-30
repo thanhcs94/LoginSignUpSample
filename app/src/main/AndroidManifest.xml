@@ -36,6 +36,9 @@
         <activity android:name=".DialogLoginFacebook"
             android:theme="@style/AppTheme.TranNoActionBar">
         </activity>
+        <activity android:name=".DialogLoginGoogle"
+            android:theme="@style/AppTheme.TranNoActionBar">
+        </activity>
     </application>
 
 </manifest>

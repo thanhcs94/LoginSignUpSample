@@ -7,5 +7,4 @@ package com.thanhcs94.loginsignupsample.api;
 public class API {
     public static final String DOMAIN = "https://www.thanhcs.com/";
     public static final String LOGIN =  DOMAIN + "login";
-
 }
