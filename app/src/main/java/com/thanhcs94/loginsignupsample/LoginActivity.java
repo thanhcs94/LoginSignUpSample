@@ -292,6 +292,10 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
                 signIn();
             }
         });
+
+        startActivity(new Intent(this, DialogLoginFacebook.class));
+        overridePendingTransition(0,0);
+
     }
 
     /** Facebook **/
