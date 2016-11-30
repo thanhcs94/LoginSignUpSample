@@ -34,8 +34,6 @@ import butterknife.Bind;
 import butterknife.ButterKnife;
 
 public class DialogLoginFacebook extends AppCompatActivity {
-
-    //facebook
     private CallbackManager callbackManager;
     @Bind(R.id.fb_login_button)
     LoginButton signInFB;
@@ -99,7 +97,7 @@ public class DialogLoginFacebook extends AppCompatActivity {
                                                 String sms = "User Name: " + firstName + " " + lastName + " " + socialEmail + " " + socialBirthday + " " + socialGender + " -  " + uId + " - " + uAvata + " - " + accessToken;
                                                 Log.wtf("FACEBOOK", sms);
                                                 if (socialEmail.contains("@")) {
-                                                    //    loginwithSocial(accessToken, type, uId, TRACK_SOCIAL_FB);
+                                                  //loginwithSocial(accessToken, type, uId, TRACK_SOCIAL_FB);
                                                 }
                                             } catch (JSONException e) {
                                                 String sms = "User Name: " + firstName + " " + lastName + " " + socialEmail + " " + socialBirthday + " " + socialGender + " -  " + uId + " - " + uAvata + " - " + accessToken;

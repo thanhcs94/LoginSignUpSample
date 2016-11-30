@@ -33,20 +33,14 @@ import butterknife.ButterKnife;
 
 public class DialogLoginGoogle extends AppCompatActivity implements GoogleApiClient.OnConnectionFailedListener{
     public static String TAG = "DialogLoginGoogle".toUpperCase();
-    // Value
-    String socialEmail;
-    String socialBirthday;
-    String socialGender;
-    String accessToken , uId , type;
-    //google
     private static final int REQ_SIGN_IN_REQUIRED = 55664;
-    private static final int REQUEST_SIGNUP = 0;
+    private static final int RC_SIGN_IN = 007;
     @Bind(R.id.btn_sign_in_google)
     SignInButton signInGoogle;
-    private static final int RC_SIGN_IN = 007;
+    public String accessToken, uId, type;
     private GoogleApiClient mGoogleApiClient;
     private ProgressDialog mProgressDialog;
-    public String  gMailPlus;
+    public String gMailPlus;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -61,10 +55,6 @@ public class DialogLoginGoogle extends AppCompatActivity implements GoogleApiCli
         }catch (Exception e){
 
         }
-        /***
-         * G++ login
-         * Start G++_login
-         */
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestEmail()
                 .build();
@@ -160,7 +150,6 @@ public class DialogLoginGoogle extends AppCompatActivity implements GoogleApiCli
             // Signed in successfully, show authenticated UI.
             GoogleSignInAccount acct = result.getSignInAccount();
             Log.e(TAG, "display name: " + acct.getDisplayName());
-
             final String personName = acct.getDisplayName();
             final String email = acct.getEmail();
             gMailPlus = email;
@@ -169,8 +158,7 @@ public class DialogLoginGoogle extends AppCompatActivity implements GoogleApiCli
             new RetrieveTokenTask().execute(gMailPlus);
             Log.e(TAG, "Name: " + personName + ", email: " + email +" uId "+ uId);
 
-            //             loginwithSocial(assettoken, "Gmail", uId);
-
+            //loginwithSocial(assettoken, "Gmail", uId);
         } else {
 
         }
